@@ -24,6 +24,13 @@ HOW TO USE
    and open the Roblox homepage in your browser.
 
 
+UNLIMITED MULTI-INSTANCE
+Noctra bypasses the Roblox singleton mutex. You can open unlimited Roblox 
+tabs and log in to multiple accounts simultaneously. The only limit is your 
+PC's hardware. Keep the "System Booster" enabled to free up RAM so you can 
+run as many tabs as possible.
+
+
 TROUBLESHOOTING
 BSOD on Launch
 Reason: Virtualization is still enabled in Windows.
@@ -33,11 +40,6 @@ Driver Failed to Load
 Reason: Missing files or blocked by Antivirus.
 Fix: Ensure kdmapper.exe and NoctraCore.sys are in the same folder. 
 Add the folder to your Antivirus exclusions.
-
-Roblox Account Locked
-Reason: Suspicious activity detected by Byfron.
-Fix: The Noctra Watchdog may have blocked a telemetry script. Restart 
-the loader and ensure the Hypervisor module is active.
 
 
 Copyright (c) 2026 Noctra Team. Distributed under the MIT License.
