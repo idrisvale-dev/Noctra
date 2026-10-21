@@ -1,44 +1,47 @@
+; language: x86-64 MASM, file: src/hv/svm_asm.asm
 section .text
 
-global AsmVmxLaunch
-AsmVmxLaunch:
-    mov rax, rcx
-    push rax
-    vmlaunch
-    pop rax
-    ret
+global AsmSvmLaunch
+extern SvmExitHandler_C
 
-global AsmVmExitHandler
-extern VmExitHandler_C
-AsmVmExitHandler:
-    ; Save guest state
-    push rax
+; RCX = Physical Address of VMCB
+AsmSvmLaunch:
+    ; Save host state
     push rbx
-    push rcx
-    push rdx
+    push rbp
     push rsi
     push rdi
-    push r8
-    push r9
-    push r10
-    push r11
-    
-    mov rcx, rsp 
-    sub rsp, 32
-    call VmExitHandler_C
-    add rsp, 32
-    
-    ; Restore guest state
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rdi
-    pop rsi
-    pop rdx
-    pop rcx
-    pop rbx
-    pop rax
+    push r12
+    push r13
+    push r14
+    push r15
 
-    vmresume
-    jmp AsmVmExitHandler
+    ; Store host RSP in RBP
+    mov rbp, rsp
+    
+    ; Load VMCB
+    mov rax, rcx
+    vmload rax
+
+    ; Guest state is now loaded. Run guest.
+    vmrun rax
+
+AsmSvmExitHandler:
+    ; On VMEXIT, RAX contains the VMCB physical address
+    mov r15, rax
+
+    ; Save guest state from VMCB (optional, but needed for C++ handler)
+    ; Switch back to host stack
+    mov rsp, rbp
+
+    ; Call C++ handler with VMCB pointer in RCX
+    mov rcx, r15
+    sub rsp, 32
+    call SvmExitHandler_C
+    add rsp, 32
+
+    ; Resume guest
+    mov rax, r15
+    vmload rax
+    vmrun rax
+    jmp AsmSvmExitHandler
