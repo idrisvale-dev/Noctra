@@ -1,3 +1,4 @@
+// language: C#, file: loader/MainForm.cs
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,6 +10,7 @@ namespace NoctraLoader
 {
     public partial class MainForm : Form
     {
+        // Win32 API para makausap ang Kernel Driver natin
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
 
@@ -23,12 +25,14 @@ namespace NoctraLoader
         private const uint OPEN_EXISTING = 3;
         private const uint FILE_ATTRIBUTE_NORMAL = 0x80;
 
+        // IOCTL Codes na naka-match sa C++ Driver
         private const uint IOCTL_NOCTRA_SPOOF_HWID = 0x222000;
         private const uint IOCTL_NOCTRA_TOGGLE_WATCHDOG = 0x222004;
         private const uint IOCTL_NOCTRA_BYPASS_MUTEX = 0x222008;
         private const uint IOCTL_NOCTRA_PURGE_RAM = 0x22200C;
         private const uint IOCTL_NOCTRA_START_HV = 0x222010;
 
+        // UI Elements
         private CheckBox chkSpoofer, chkStealth, chkInputBot, chkMultiInstance, chkBooster, chkWatchdog;
         private Button btnLaunch;
         private Label lblStatus;
@@ -84,7 +88,7 @@ namespace NoctraLoader
         private void SendIoctl(uint code)
         {
             IntPtr hDevice = CreateFile("\\\\.\\NoctraCore", GENERIC_READ | GENERIC_WRITE, 0, IntPtr.Zero, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, IntPtr.Zero);
-            if (hDevice == new IntPtr(-1)) return;
+            if (hDevice == new IntPtr(-1)) return; // Driver not loaded
             DeviceIoControl(hDevice, code, IntPtr.Zero, 0, IntPtr.Zero, 0, out _, IntPtr.Zero);
             CloseHandle(hDevice);
         }
@@ -101,12 +105,13 @@ namespace NoctraLoader
 
             try
             {
+                // 1. I-load ang driver gamit si kdmapper
                 if (File.Exists(mapperPath) && File.Exists(driverPath))
                 {
                     ProcessStartInfo psi = new ProcessStartInfo
                     {
                         FileName = mapperPath,
-                        Arguments = driverPath,
+                        Arguments = driverPath, // Ipasa yung path ng .sys file
                         UseShellExecute = true,
                         Verb = "runas",
                         CreateNoWindow = true,
@@ -114,10 +119,18 @@ namespace NoctraLoader
                     };
                     using (Process proc = Process.Start(psi)) { proc.WaitForExit(); }
                 }
+                else
+                {
+                    MessageBox.Show("kdmapper.exe or NoctraCore.sys is missing from the folder!", "Missing Files", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    btnLaunch.Enabled = true;
+                    btnLaunch.Text = "Launch Roblox";
+                    return;
+                }
 
                 lblStatus.Text = "Status: Applying Features...";
                 Application.DoEvents();
 
+                // 2. I-send ang IOCTL commands sa driver
                 if (chkSpoofer.Checked) SendIoctl(IOCTL_NOCTRA_SPOOF_HWID);
                 if (chkMultiInstance.Checked) SendIoctl(IOCTL_NOCTRA_BYPASS_MUTEX);
                 if (chkBooster.Checked) SendIoctl(IOCTL_NOCTRA_PURGE_RAM);
@@ -127,6 +140,7 @@ namespace NoctraLoader
                 lblStatus.Text = "Status: Launching Game...";
                 Application.DoEvents();
 
+                // 3. I-launch ang Roblox
                 Process.Start(new ProcessStartInfo { FileName = "https://www.roblox.com/home", UseShellExecute = true });
 
                 lblStatus.Text = "Status: Tools Running. Protected.";
